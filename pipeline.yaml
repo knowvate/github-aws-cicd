@@ -211,6 +211,16 @@ Resources:
     Properties:
       VersioningConfiguration:
         Status: Enabled
+  PublicTestBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      AccessControl: PublicRead
+      BucketName: !Sub '${AWS::StackName}-public-test-bucket'
+      VersioningConfiguration:
+        Status: Enabled
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: error.html
   CodePipelineWebhook:
     Type: 'AWS::CodePipeline::Webhook'
     Properties:

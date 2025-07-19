@@ -1,0 +1,19 @@
+{
+  "name": "github-aws-cicd-cdk",
+  "version": "1.0.0",
+  "description": "CDK v2 conversion of CloudFormation pipeline",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "cdk": "cdk"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.0.0",
+    "constructs": "^10.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^4.0.0",
+    "@types/node": "^18.0.0"
+  }
+}

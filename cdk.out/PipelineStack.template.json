@@ -13,24 +13,6 @@
     "aws:cdk:path": "PipelineStack/CodePipelineArtifactStore/Resource"
    }
   },
-  "PublicTestBucket730B0393": {
-   "Type": "AWS::S3::Bucket",
-   "Properties": {
-    "BucketName": "pipelinestack-public-test-bucket",
-    "VersioningConfiguration": {
-     "Status": "Enabled"
-    },
-    "WebsiteConfiguration": {
-     "ErrorDocument": "error.html",
-     "IndexDocument": "index.html"
-    }
-   },
-   "UpdateReplacePolicy": "Retain",
-   "DeletionPolicy": "Retain",
-   "Metadata": {
-    "aws:cdk:path": "PipelineStack/PublicTestBucket/Resource"
-   }
-  },
   "PreSignedUrlLambdaRoleC385A0D6": {
    "Type": "AWS::IAM::Role",
    "Properties": {
@@ -49,74 +31,6 @@
    },
    "Metadata": {
     "aws:cdk:path": "PipelineStack/PreSignedUrlLambdaRole/Resource"
-   }
-  },
-  "PreSignedUrlLambdaRoleDefaultPolicy0D1AB6E6": {
-   "Type": "AWS::IAM::Policy",
-   "Properties": {
-    "PolicyDocument": {
-     "Statement": [
-      {
-       "Action": "s3:GetObject",
-       "Effect": "Allow",
-       "Resource": {
-        "Fn::Join": [
-         "",
-         [
-          {
-           "Fn::GetAtt": [
-            "PublicTestBucket730B0393",
-            "Arn"
-           ]
-          },
-          "/*"
-         ]
-        ]
-       }
-      }
-     ],
-     "Version": "2012-10-17"
-    },
-    "PolicyName": "PreSignedUrlLambdaRoleDefaultPolicy0D1AB6E6",
-    "Roles": [
-     {
-      "Ref": "PreSignedUrlLambdaRoleC385A0D6"
-     }
-    ]
-   },
-   "Metadata": {
-    "aws:cdk:path": "PipelineStack/PreSignedUrlLambdaRole/DefaultPolicy/Resource"
-   }
-  },
-  "PreSignedUrlLambda5C2C2A4A": {
-   "Type": "AWS::Lambda::Function",
-   "Properties": {
-    "Code": {
-     "ZipFile": "import json\nimport boto3\nimport os\ndef lambda_handler(event, context):\n    bucket = os.environ.get('BUCKET_NAME')\n    key = event.get('key')\n    expires_in = int(event.get('expires_in', 86400))\n    s3 = boto3.client('s3')\n    url = s3.generate_presigned_url('get_object', Params={'Bucket': bucket, 'Key': key}, ExpiresIn=expires_in)\n    return {'statusCode': 200, 'body': json.dumps({'url': url})}"
-    },
-    "Environment": {
-     "Variables": {
-      "BUCKET_NAME": {
-       "Ref": "PublicTestBucket730B0393"
-      }
-     }
-    },
-    "Handler": "index.lambda_handler",
-    "Role": {
-     "Fn::GetAtt": [
-      "PreSignedUrlLambdaRoleC385A0D6",
-      "Arn"
-     ]
-    },
-    "Runtime": "python3.9",
-    "Timeout": 30
-   },
-   "DependsOn": [
-    "PreSignedUrlLambdaRoleDefaultPolicy0D1AB6E6",
-    "PreSignedUrlLambdaRoleC385A0D6"
-   ],
-   "Metadata": {
-    "aws:cdk:path": "PipelineStack/PreSignedUrlLambda/Resource"
    }
   },
   "CodeBuildServiceRoleA9C1F6A8": {
@@ -616,7 +530,7 @@
   "CDKMetadata": {
    "Type": "AWS::CDK::Metadata",
    "Properties": {
-    "Analytics": "v2:deflate64:H4sIAAAAAAAA/03MTQvCMAwG4N+yexdnBb0reB7z4FG6NmK2rhnr6pDS/y77EDy9T/KGSJDFEYpMTT7Xps0t1RBvo9KtUJN/RH+AeA66xVFcnm5VEqQ6iBVbnJdLlmxJf+ZxVRJWdbVREK/B6ZHYzd3PSWg2WAeyBmI5cIN6+b9xrXvq0ZJDiOWm5eTPd6xfzG1KokLPYdCYhGOD0PjdW0rYn6DIGk+UD8GN1CFUa34BgjYITvYAAAA="
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/03MwQ6CMAwG4GfhPirORO/6AgQPHs3YaiwblDAmMcve3cA4ePq//m0qQVZnqAq1+FIbWzpqId5npa1Qi39Gf4J4DdriLG6vISsJUj3Ehh2u5ZY1O9LfdcxKQrPBNpAzEOuJO9Tbh515PdKIjgaEWO/aTv78wPbNbFMSDXoOk8YkBjYInT98pITjBaqi80TlFIaZeoQm5w9rm47q2AAAAA=="
    },
    "Metadata": {
     "aws:cdk:path": "PipelineStack/CDKMetadata/Default"

@@ -61,19 +61,30 @@ To set up this project on a fresh machine:
 ## Note
 
 If your AWS account is not yet linked to CodeBuild, deployment will fail with a subscription error. Wait for AWS to enable CodeBuild on your account, then retry deployment.
+On the free tier I had to raise a support case. - 
+
+"In order to proceed with verifying the account for the access to CodeBuild, please confirm the type of limit you're trying to use, below you'll find the options:
+
+- Number of build projects.
+- Number of concurrently running builds"
+
+They may also ask about the region, like eu-west-2 / London
+
 ## AWS GitHub CI/CD Pipeline
 
-This project provides an AWS CloudFormation template (`pipeline.yaml`) to set up a CI/CD pipeline for GitHub repositories using AWS CodePipeline and CodeBuild. It automates building, testing, and deploying code to dev, qa, and prod environments, and includes a public S3 bucket for testing.
+This project uses AWS CDK (TypeScript) to set up a CI/CD pipeline for GitHub repositories using AWS CodePipeline and CodeBuild. It automates building, testing, and deploying code to dev, qa, and prod environments, and can include a public S3 bucket for testing (currently commented out).
 
 ### What the Pipeline Does
 
 - Connects your GitHub repository to AWS using a personal access token stored in AWS Secrets Manager.
 - Triggers automatically on pull request events (created, updated, reopened) for the specified branch (default: `main`).
-- Uses AWS CodeBuild to build your code (using `buildspec.yaml`).
-- Deploys to dev, qa, and prod environments using separate CodeBuild projects and `deployspec.yaml`.
+- Uses AWS CodeBuild to build your code (add a buildspec file to your repo if needed).
+ - Uses AWS CodeBuild to build your code (default buildspec.yaml is provided in `cdk/src/`; customize as needed).
+ - Uses AWS CodeBuild to build your code (default buildspec.yaml is provided in `cdk/src/` and used by the pipeline; customize as needed).
+- Deploys to dev, qa, and prod environments using separate CodeBuild projects (customize in CDK TypeScript files).
 - Stores build artifacts in an S3 bucket.
-- Includes a manual approval step before deploying to QA.
-- Creates a public S3 bucket for static website hosting as a test resource.
+- Includes a manual approval step before deploying to QA (customize in CDK TypeScript files).
+- Can create a public S3 bucket for static website hosting as a test resource (currently commented out in CDK).
 
 ### Prerequisites
 
@@ -90,10 +101,12 @@ This project provides an AWS CloudFormation template (`pipeline.yaml`) to set up
    - Key: `GITHUB_ACCESS_TOKEN`
    - Value: your GitHub token
 
-3. **Edit `pipeline.yaml` parameters** if needed:
+3. **Edit pipeline parameters as needed:**
+   - In `cdk/src/app.ts` or `cdk/src/pipeline-stack.ts`.
    - `GitHubOwner`: your GitHub username or org
    - `GitHubRepository`: your repository name
    - `GitHubBranch`: branch to trigger pipeline (default: `main`)
+   - The default buildspec file is at `cdk/src/buildspec.yaml`. Edit this file to customize build steps and artifacts for your project.
 
 4. **Deploy the CloudFormation stack**:
    - Using AWS Console: Create a new stack and upload `pipeline.yaml`.
@@ -214,6 +227,3 @@ npx cdk deploy > STACK_ERRORS.txt 2>&1
 - `package.json`, `tsconfig.json` — Project configuration
 - `.gitignore` — Ignores `STACK_ERRORS.txt`
 
-## Unnecessary Files
-
-All legacy YAML files have been removed. Only CDK TypeScript files are required.

@@ -1,4 +1,5 @@
 import { Stack, StackProps, Duration, SecretValue } from 'aws-cdk-lib';
+import { pipelineConfig } from './pipeline-props';
 import { Construct } from 'constructs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
@@ -22,46 +23,54 @@ export class PipelineStack extends Stack {
     const artifactBucket = new s3.Bucket(this, 'CodePipelineArtifactStore', {
       versioned: true,
     });
-
-    const publicTestBucket = new s3.Bucket(this, 'PublicTestBucket', {
-      bucketName: `${this.stackName.toLowerCase()}-public-test-bucket`,
-      versioned: true,
-      websiteIndexDocument: 'index.html',
-      websiteErrorDocument: 'error.html',
-      publicReadAccess: false,
+    // Apply global Project and Owner tags to all resources in this stack
+    pipelineConfig.tags.forEach(tag => {
+      this.tags.setTag(tag.key, tag.value);
     });
+    // Apply global tags
+    pipelineConfig.tags.forEach(tag => {
+      this.tags.setTag(tag.key, tag.value);
+    });
+
+    // const publicTestBucket = new s3.Bucket(this, 'PublicTestBucket', {
+    //   bucketName: `${this.stackName.toLowerCase()}-public-test-bucket`,
+    //   versioned: true,
+    //   websiteIndexDocument: 'index.html',
+    //   websiteErrorDocument: 'error.html',
+    //   publicReadAccess: false,
+    // });
 
     // Lambda Role
     const lambdaRole = new iam.Role(this, 'PreSignedUrlLambdaRole', {
       assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
     });
-    lambdaRole.addToPolicy(new iam.PolicyStatement({
-      actions: ['s3:GetObject'],
-      resources: [publicTestBucket.arnForObjects('*')],
-    }));
+    // lambdaRole.addToPolicy(new iam.PolicyStatement({
+    //   actions: ['s3:GetObject'],
+    //   resources: [publicTestBucket.arnForObjects('*')],
+    // }));
 
     // Lambda Function
-    const preSignedUrlLambda = new lambda.Function(this, 'PreSignedUrlLambda', {
-      runtime: lambda.Runtime.PYTHON_3_9,
-      handler: 'index.lambda_handler',
-      code: lambda.Code.fromInline(
-        `import json
-import boto3
-import os
-def lambda_handler(event, context):
-    bucket = os.environ.get('BUCKET_NAME')
-    key = event.get('key')
-    expires_in = int(event.get('expires_in', 86400))
-    s3 = boto3.client('s3')
-    url = s3.generate_presigned_url('get_object', Params={'Bucket': bucket, 'Key': key}, ExpiresIn=expires_in)
-    return {'statusCode': 200, 'body': json.dumps({'url': url})}`
-      ),
-      environment: {
-        BUCKET_NAME: publicTestBucket.bucketName,
-      },
-      role: lambdaRole,
-      timeout: Duration.seconds(30),
-    });
+    // const preSignedUrlLambda = new lambda.Function(this, 'PreSignedUrlLambda', {
+    //   runtime: lambda.Runtime.PYTHON_3_9,
+    //   handler: 'index.lambda_handler',
+    //   code: lambda.Code.fromInline(
+    //     `import json
+// import boto3
+// import os
+// def lambda_handler(event, context):
+//     bucket = os.environ.get('BUCKET_NAME')
+//     key = event.get('key')
+//     expires_in = int(event.get('expires_in', 86400))
+//     s3 = boto3.client('s3')
+//     url = s3.generate_presigned_url('get_object', Params={'Bucket': bucket, 'Key': key}, ExpiresIn=expires_in)
+//     return {'statusCode': 200, 'body': json.dumps({'url': url})}`
+    //   ),
+    //   environment: {
+    //     BUCKET_NAME: publicTestBucket.bucketName,
+    //   },
+    //   role: lambdaRole,
+    //   timeout: Duration.seconds(30),
+    // });
 
     // IAM Role for CodeBuild
     const codeBuildRole = new iam.Role(this, 'CodeBuildServiceRole', {
@@ -80,7 +89,10 @@ def lambda_handler(event, context):
         'codebuild:BatchGetBuilds',
         'codebuild:StartBuild',
       ],
-      resources: ['*'],
+      resources: [
+        artifactBucket.bucketArn,
+        `${artifactBucket.bucketArn}/*`
+      ],
     }));
 
     // CodeBuild Project
@@ -116,42 +128,78 @@ def lambda_handler(event, context):
         'codebuild:BatchGetBuilds',
         'codebuild:StartBuild',
       ],
-      resources: ['*'],
+      resources: [
+        artifactBucket.bucketArn,
+        `${artifactBucket.bucketArn}/*`
+      ],
     }));
 
-    // CodePipeline
+    // Pipeline stages configuration
+    interface StageConfig {
+      name: string;
+      actions: codepipeline.IAction[];
+    }
+
+    // Source stage
+    const sourceOutput = new codepipeline.Artifact('SourceCode');
+    const sourceStage: StageConfig = {
+      name: 'Source',
+      actions: [
+        new cp_actions.GitHubSourceAction({
+          actionName: 'Source',
+          owner: props.githubOwner,
+          repo: props.githubRepo,
+          branch: props.githubBranch,
+          oauthToken: SecretValue.secretsManager('GITHUB_ACCESS_TOKEN'),
+          output: sourceOutput,
+        }),
+      ],
+    };
+
+    // Build stage
+    const buildOutput = new codepipeline.Artifact('BuildOutput');
+    const buildStage: StageConfig = {
+      name: 'Build',
+      actions: [
+        new cp_actions.CodeBuildAction({
+          actionName: 'Build',
+          project: codeBuildProject,
+          input: sourceOutput,
+          outputs: [buildOutput],
+        }),
+      ],
+    };
+
+    // Dev, QA, Prod stages (dummy actions for now)
+    const envStages: StageConfig[] = pipelineConfig.environments.map(envConfig => {
+      // Example: create a resource per environment and tag it
+      // const envBucket = new s3.Bucket(this, `${envConfig.name}Bucket`, { versioned: true });
+      // envBucket.node.defaultChild?.addPropertyOverride('Tags', [{ Key: 'Environment', Value: envConfig.name }]);
+      // Or simply tag the stack for each environment
+      this.tags.setTag('Environment', envConfig.name);
+      return {
+        name: envConfig.name,
+        actions: [
+          // Replace with actual deploy actions for each environment
+          new cp_actions.ManualApprovalAction({ actionName: `${envConfig.name}Approval` })
+        ],
+      };
+    });
+
+    // Assemble all stages
+    const stages: codepipeline.StageProps[] = [
+      { stageName: sourceStage.name, actions: sourceStage.actions },
+      { stageName: buildStage.name, actions: buildStage.actions },
+      ...envStages.map(stage => ({ stageName: stage.name, actions: stage.actions }))
+    ];
+
+    // Create pipeline
     const pipeline = new codepipeline.Pipeline(this, 'CodePipeline', {
       pipelineName: this.stackName,
       artifactBucket,
       role: codePipelineRole,
       pipelineType: codepipeline.PipelineType.V2,
-      stages: [
-        {
-          stageName: 'Source',
-          actions: [
-            new cp_actions.GitHubSourceAction({
-              actionName: 'Source',
-              owner: props.githubOwner,
-              repo: props.githubRepo,
-              branch: props.githubBranch,
-              oauthToken: SecretValue.secretsManager('GITHUB_ACCESS_TOKEN'),
-              output: new codepipeline.Artifact('SourceCode'),
-            }),
-          ],
-        },
-        {
-          stageName: 'Build',
-          actions: [
-            new cp_actions.CodeBuildAction({
-              actionName: 'Build',
-              project: codeBuildProject,
-              input: new codepipeline.Artifact('SourceCode'),
-              outputs: [new codepipeline.Artifact('BuildOutput')],
-            }),
-          ],
-        },
-        // Add Dev, Qa, Prod stages as needed
-      ],
+      stages,
     });
   }
 }

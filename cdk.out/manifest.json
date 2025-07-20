@@ -18,7 +18,7 @@
         "validateOnSynth": false,
         "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-deploy-role-${AWS::AccountId}-${AWS::Region}",
         "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-cfn-exec-role-${AWS::AccountId}-${AWS::Region}",
-        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}/b4408ed5852d6510c96be2a08805a788123597a61c1f99c96c29894ebd1c2d3c.json",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}/fe429690a2105b69a4ba1eaa31d0fb62bd3df21ba607704e95a76e3e8c4ce114.json",
         "requiresBootstrapStackVersion": 6,
         "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
         "additionalDependencies": [
@@ -40,28 +40,10 @@
             "data": "CodePipelineArtifactStore2354D54A"
           }
         ],
-        "/PipelineStack/PublicTestBucket/Resource": [
-          {
-            "type": "aws:cdk:logicalId",
-            "data": "PublicTestBucket730B0393"
-          }
-        ],
         "/PipelineStack/PreSignedUrlLambdaRole/Resource": [
           {
             "type": "aws:cdk:logicalId",
             "data": "PreSignedUrlLambdaRoleC385A0D6"
-          }
-        ],
-        "/PipelineStack/PreSignedUrlLambdaRole/DefaultPolicy/Resource": [
-          {
-            "type": "aws:cdk:logicalId",
-            "data": "PreSignedUrlLambdaRoleDefaultPolicy0D1AB6E6"
-          }
-        ],
-        "/PipelineStack/PreSignedUrlLambda/Resource": [
-          {
-            "type": "aws:cdk:logicalId",
-            "data": "PreSignedUrlLambda5C2C2A4A"
           }
         ],
         "/PipelineStack/CodeBuildServiceRole/Resource": [
